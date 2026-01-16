@@ -237,17 +237,17 @@ const Index = () => {
   const progressToNextLevel = (userPoints % 100);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-start mb-8 animate-fade-in">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 pb-20 md:pb-8">
+      <div className="container mx-auto px-4 py-4 md:py-8">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6 md:mb-8 animate-fade-in">
           <div>
-            <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
               Мой Магазин
             </h1>
-            <p className="text-lg text-muted-foreground">Оставьте отзыв и заработайте баллы!</p>
+            <p className="text-base md:text-lg text-muted-foreground">Оставьте отзыв и заработайте баллы!</p>
           </div>
           
-          <Card className="backdrop-blur-sm bg-white/90 border-2 border-primary/20 min-w-[280px]">
+          <Card className="backdrop-blur-sm bg-white/90 border-2 border-primary/20 w-full md:min-w-[280px] md:max-w-[320px]">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2">
                 <Icon name="Trophy" className="w-5 h-5 text-amber-500" />
@@ -296,7 +296,7 @@ const Index = () => {
         </div>
 
         <Dialog open={isRewardsOpen} onOpenChange={setIsRewardsOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] md:w-full">
             <DialogHeader>
               <DialogTitle className="text-3xl flex items-center gap-2">
                 <Icon name="Store" className="w-8 h-8 text-primary" />
@@ -428,7 +428,7 @@ const Index = () => {
           </DialogContent>
         </Dialog>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
           <Card className="backdrop-blur-sm bg-white/90 border-2 hover:shadow-xl transition-all animate-scale-in">
             <CardHeader className="bg-gradient-to-r from-primary/10 to-secondary/10">
               <CardTitle className="flex items-center gap-2">
@@ -508,7 +508,7 @@ const Index = () => {
                       {gameTime}s
                     </Badge>
                   </div>
-                  <div className="relative h-[400px] bg-gradient-to-b from-indigo-900 to-purple-900 rounded-lg overflow-hidden border-4 border-primary">
+                  <div className="relative h-[300px] md:h-[400px] bg-gradient-to-b from-indigo-900 to-purple-900 rounded-lg overflow-hidden border-4 border-primary">
                     {stars.map(star => (
                       <button
                         key={star.id}
@@ -531,16 +531,16 @@ const Index = () => {
           </Card>
         </div>
 
-        <div className="mb-6 animate-fade-in">
-          <h2 className="text-3xl font-bold mb-2">Все отзывы ({reviews.length})</h2>
+        <div className="mb-4 md:mb-6 animate-fade-in">
+          <h2 className="text-2xl md:text-3xl font-bold mb-2">Все отзывы ({reviews.length})</h2>
           <div className="flex items-center gap-2">
             <div className="flex">{renderStars(parseFloat(averageRating))}</div>
-            <span className="text-xl font-semibold">{averageRating}</span>
-            <span className="text-muted-foreground">из 5</span>
+            <span className="text-lg md:text-xl font-semibold">{averageRating}</span>
+            <span className="text-sm md:text-base text-muted-foreground">из 5</span>
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 md:gap-6 md:grid-cols-2">
           {reviews.map((review, index) => (
             <Card 
               key={review.id}
