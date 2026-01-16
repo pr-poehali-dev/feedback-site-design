@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
 interface Review {
@@ -24,6 +26,26 @@ interface Star {
   x: number;
   y: number;
   speed: number;
+}
+
+interface Reward {
+  id: number;
+  name: string;
+  description: string;
+  cost: number;
+  icon: string;
+  emoji: string;
+  discount?: number;
+  type: 'discount' | 'bonus' | 'gift';
+}
+
+interface PurchasedReward {
+  id: number;
+  rewardId: number;
+  reward: Reward;
+  purchasedAt: string;
+  used: boolean;
+  code?: string;
 }
 
 const initialReviews: Review[] = [
@@ -47,6 +69,15 @@ const initialReviews: Review[] = [
   }
 ];
 
+const rewards: Reward[] = [
+  { id: 1, name: 'Скидка 5%', description: 'Скидка на любую покупку', cost: 100, icon: 'Ticket', emoji: '🎟️', discount: 5, type: 'discount' },
+  { id: 2, name: 'Скидка 10%', description: 'Скидка на любую покупку', cost: 200, icon: 'TicketPercent', emoji: '🎫', discount: 10, type: 'discount' },
+  { id: 3, name: 'Скидка 15%', description: 'Скидка на покупку от 5000₽', cost: 350, icon: 'BadgePercent', emoji: '💎', discount: 15, type: 'discount' },
+  { id: 4, name: 'Бесплатная доставка', description: 'Бесплатная доставка заказа', cost: 150, icon: 'Truck', emoji: '🚚', type: 'bonus' },
+  { id: 5, name: 'Подарок', description: 'Случайный подарок к заказу', cost: 250, icon: 'Gift', emoji: '🎁', type: 'gift' },
+  { id: 6, name: 'VIP статус', description: 'Приоритетная поддержка на месяц', cost: 500, icon: 'Crown', emoji: '👑', type: 'bonus' }
+];
+
 const Index = () => {
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const [userPoints, setUserPoints] = useState(150);
@@ -58,6 +89,8 @@ const Index = () => {
   const [gameScore, setGameScore] = useState(0);
   const [stars, setStars] = useState<Star[]>([]);
   const [gameTime, setGameTime] = useState(30);
+  const [purchasedRewards, setPurchasedRewards] = useState<PurchasedReward[]>([]);
+  const [isRewardsOpen, setIsRewardsOpen] = useState(false);
 
   useEffect(() => {
     if (isGameActive && gameTime > 0) {
@@ -168,6 +201,34 @@ const Index = () => {
     toast.success('+5 баллов за лайк!');
   };
 
+  const purchaseReward = (reward: Reward) => {
+    if (userPoints < reward.cost) {
+      toast.error('Недостаточно баллов!');
+      return;
+    }
+
+    const code = `${reward.name.toUpperCase().replace(/\s/g, '')}-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
+    const newPurchase: PurchasedReward = {
+      id: Date.now(),
+      rewardId: reward.id,
+      reward: reward,
+      purchasedAt: new Date().toLocaleString('ru-RU'),
+      used: false,
+      code: code
+    };
+
+    setPurchasedRewards([newPurchase, ...purchasedRewards]);
+    setUserPoints(prev => prev - reward.cost);
+    toast.success(`${reward.emoji} ${reward.name} куплен! Код: ${code}`);
+  };
+
+  const useReward = (id: number) => {
+    setPurchasedRewards(purchasedRewards.map(r => 
+      r.id === id ? { ...r, used: true } : r
+    ));
+    toast.success('Награда использована! ✅');
+  };
+
   const averageRating = reviews.length > 0 
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : '0.0';
@@ -222,9 +283,150 @@ const Index = () => {
                   <div className="text-xs text-muted-foreground">Уровень</div>
                 </div>
               </div>
+              <Button 
+                onClick={() => setIsRewardsOpen(true)}
+                className="w-full mt-4 gap-2"
+                variant="default"
+              >
+                <Icon name="Gift" className="w-4 h-4" />
+                Магазин наград
+              </Button>
             </CardContent>
           </Card>
         </div>
+
+        <Dialog open={isRewardsOpen} onOpenChange={setIsRewardsOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-3xl flex items-center gap-2">
+                <Icon name="Store" className="w-8 h-8 text-primary" />
+                Магазин наград
+              </DialogTitle>
+              <DialogDescription>
+                Обменивайте накопленные баллы на скидки и бонусы
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Tabs defaultValue="shop" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="shop" className="gap-2">
+                  <Icon name="ShoppingCart" className="w-4 h-4" />
+                  Каталог наград
+                </TabsTrigger>
+                <TabsTrigger value="purchased" className="gap-2">
+                  <Icon name="Package" className="w-4 h-4" />
+                  Мои награды ({purchasedRewards.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="shop" className="mt-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  {rewards.map((reward) => (
+                    <Card key={reward.id} className="border-2 hover:shadow-lg transition-all hover:-translate-y-1">
+                      <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-4xl">{reward.emoji}</div>
+                            <div>
+                              <CardTitle className="text-lg">{reward.name}</CardTitle>
+                              <CardDescription>{reward.description}</CardDescription>
+                            </div>
+                          </div>
+                          {reward.discount && (
+                            <Badge variant="secondary" className="text-lg">
+                              -{reward.discount}%
+                            </Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Icon name="Star" className="w-5 h-5 fill-amber-400 text-amber-400" />
+                            <span className="text-2xl font-bold text-primary">{reward.cost}</span>
+                            <span className="text-muted-foreground">баллов</span>
+                          </div>
+                          <Button 
+                            onClick={() => purchaseReward(reward)}
+                            disabled={userPoints < reward.cost}
+                            className="gap-2"
+                          >
+                            <Icon name="ShoppingBag" className="w-4 h-4" />
+                            Купить
+                          </Button>
+                        </div>
+                        {userPoints < reward.cost && (
+                          <p className="text-sm text-destructive mt-2">
+                            Не хватает {reward.cost - userPoints} баллов
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="purchased" className="mt-6">
+                {purchasedRewards.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">🎁</div>
+                    <h3 className="text-xl font-semibold mb-2">У вас пока нет наград</h3>
+                    <p className="text-muted-foreground mb-4">Купите награды в каталоге</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {purchasedRewards.map((purchase) => (
+                      <Card key={purchase.id} className={`border-2 ${purchase.used ? 'opacity-60' : ''}`}>
+                        <CardContent className="pt-6">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className="text-5xl">{purchase.reward.emoji}</div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="text-xl font-bold">{purchase.reward.name}</h3>
+                                  {purchase.used && (
+                                    <Badge variant="secondary">Использовано</Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  {purchase.reward.description}
+                                </p>
+                                <div className="flex items-center gap-4 text-sm">
+                                  <div className="flex items-center gap-1">
+                                    <Icon name="Calendar" className="w-4 h-4" />
+                                    <span>{purchase.purchasedAt}</span>
+                                  </div>
+                                  {purchase.code && (
+                                    <div className="flex items-center gap-1">
+                                      <Icon name="Ticket" className="w-4 h-4" />
+                                      <code className="bg-muted px-2 py-1 rounded font-mono">
+                                        {purchase.code}
+                                      </code>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            {!purchase.used && (
+                              <Button 
+                                onClick={() => useReward(purchase.id)}
+                                variant="default"
+                                className="gap-2"
+                              >
+                                <Icon name="Check" className="w-4 h-4" />
+                                Использовать
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <Card className="backdrop-blur-sm bg-white/90 border-2 hover:shadow-xl transition-all animate-scale-in">
