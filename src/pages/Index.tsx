@@ -1,212 +1,392 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+import { toast } from 'sonner';
 
-const categories = [
-  { name: 'Все категории', icon: 'Grid3x3', count: 1250 },
-  { name: 'Электроника', icon: 'Smartphone', count: 320 },
-  { name: 'Одежда', icon: 'ShoppingBag', count: 450 },
-  { name: 'Рестораны', icon: 'UtensilsCrossed', count: 180 },
-  { name: 'Услуги', icon: 'Wrench', count: 220 },
-  { name: 'Здоровье', icon: 'Heart', count: 80 }
-];
+interface Review {
+  id: number;
+  author: string;
+  date: string;
+  text: string;
+  rating: number;
+  likes: number;
+  verified: boolean;
+}
 
-const reviews = [
+interface Star {
+  id: number;
+  x: number;
+  y: number;
+  speed: number;
+}
+
+const initialReviews: Review[] = [
   {
     id: 1,
-    company: 'TechnoMart',
-    category: 'Электроника',
-    rating: 4.8,
-    totalReviews: 1249,
     author: 'Анна Петрова',
-    avatar: '',
     date: '2 дня назад',
-    text: 'Отличный магазин! Быстрая доставка, качественные товары. Консультанты помогли выбрать идеальный ноутбук. Обязательно вернусь за следующей покупкой.',
+    text: 'Отличный магазин! Быстрая доставка, качественные товары. Консультанты помогли выбрать идеальный ноутбук.',
+    rating: 5,
     likes: 42,
     verified: true
   },
   {
     id: 2,
-    company: 'Модный Стиль',
-    category: 'Одежда',
-    rating: 4.6,
-    totalReviews: 856,
     author: 'Дмитрий Иванов',
-    avatar: '',
     date: '5 дней назад',
-    text: 'Большой выбор брендовой одежды по доступным ценам. Качество соответствует описанию. Немного долгая доставка, но результат того стоит!',
+    text: 'Большой выбор товаров по доступным ценам. Качество соответствует описанию.',
+    rating: 4,
     likes: 28,
     verified: true
-  },
-  {
-    id: 3,
-    company: 'Вкусно & Точка',
-    category: 'Рестораны',
-    rating: 4.9,
-    totalReviews: 2341,
-    author: 'Елена Смирнова',
-    avatar: '',
-    date: '1 неделю назад',
-    text: 'Лучший ресторан в городе! Потрясающая кухня, уютная атмосфера и внимательный персонал. Особенно рекомендую пасту карбонара.',
-    likes: 67,
-    verified: true
-  },
-  {
-    id: 4,
-    company: 'Быстрый Сервис',
-    category: 'Услуги',
-    rating: 4.4,
-    totalReviews: 432,
-    author: 'Михаил Козлов',
-    avatar: '',
-    date: '3 дня назад',
-    text: 'Качественный ремонт техники. Мастер приехал в тот же день, быстро диагностировал проблему и починил. Цены адекватные.',
-    likes: 19,
-    verified: false
   }
 ];
 
 const Index = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Все категории');
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
+  const [userPoints, setUserPoints] = useState(150);
+  const [userName, setUserName] = useState('');
+  const [reviewText, setReviewText] = useState('');
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [isGameActive, setIsGameActive] = useState(false);
+  const [gameScore, setGameScore] = useState(0);
+  const [stars, setStars] = useState<Star[]>([]);
+  const [gameTime, setGameTime] = useState(30);
 
-  const filteredReviews = reviews.filter(review => {
-    const matchesSearch = review.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         review.text.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'Все категории' || review.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  useEffect(() => {
+    if (isGameActive && gameTime > 0) {
+      const timer = setTimeout(() => setGameTime(gameTime - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (gameTime === 0 && isGameActive) {
+      endGame();
+    }
+  }, [isGameActive, gameTime]);
 
-  const renderStars = (rating: number) => {
+  useEffect(() => {
+    if (isGameActive) {
+      const interval = setInterval(() => {
+        setStars(prevStars => {
+          const newStars = prevStars
+            .map(star => ({ ...star, y: star.y + star.speed }))
+            .filter(star => star.y < 400);
+          
+          if (Math.random() < 0.1 && newStars.length < 8) {
+            newStars.push({
+              id: Date.now(),
+              x: Math.random() * 350,
+              y: 0,
+              speed: 2 + Math.random() * 3
+            });
+          }
+          return newStars;
+        });
+      }, 50);
+      return () => clearInterval(interval);
+    }
+  }, [isGameActive]);
+
+  const startGame = () => {
+    setIsGameActive(true);
+    setGameScore(0);
+    setGameTime(30);
+    setStars([]);
+  };
+
+  const endGame = () => {
+    setIsGameActive(false);
+    const earnedPoints = gameScore * 10;
+    setUserPoints(prev => prev + earnedPoints);
+    toast.success(`Игра окончена! Заработано ${earnedPoints} баллов 🎉`);
+  };
+
+  const catchStar = (starId: number) => {
+    setStars(prev => prev.filter(s => s.id !== starId));
+    setGameScore(prev => prev + 1);
+  };
+
+  const submitReview = () => {
+    if (!userName.trim() || !reviewText.trim() || rating === 0) {
+      toast.error('Заполните все поля и поставьте оценку');
+      return;
+    }
+
+    const newReview: Review = {
+      id: Date.now(),
+      author: userName,
+      date: 'Только что',
+      text: reviewText,
+      rating: rating,
+      likes: 0,
+      verified: false
+    };
+
+    setReviews([newReview, ...reviews]);
+    setUserPoints(prev => prev + 50);
+    toast.success('Отзыв добавлен! +50 баллов 🌟');
+    
+    setUserName('');
+    setReviewText('');
+    setRating(0);
+  };
+
+  const renderStars = (currentRating: number, interactive = false, size = 5) => {
     const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<Icon key={`full-${i}`} name="Star" className="w-5 h-5 fill-amber-400 text-amber-400" />);
-    }
-    if (hasHalfStar) {
-      stars.push(<Icon key="half" name="StarHalf" className="w-5 h-5 fill-amber-400 text-amber-400" />);
-    }
-    const emptyStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(<Icon key={`empty-${i}`} name="Star" className="w-5 h-5 text-gray-300" />);
+    const displayRating = interactive ? (hoverRating || rating) : currentRating;
+    
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <button
+          key={i}
+          type="button"
+          disabled={!interactive}
+          onMouseEnter={() => interactive && setHoverRating(i)}
+          onMouseLeave={() => interactive && setHoverRating(0)}
+          onClick={() => interactive && setRating(i)}
+          className={`${interactive ? 'cursor-pointer hover:scale-125 transition-transform' : ''}`}
+        >
+          <Icon 
+            name="Star" 
+            className={`w-${size} h-${size} ${i <= displayRating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'} transition-colors`}
+          />
+        </button>
+      );
     }
     return stars;
   };
 
+  const likeReview = (id: number) => {
+    setReviews(reviews.map(r => 
+      r.id === id ? { ...r, likes: r.likes + 1 } : r
+    ));
+    setUserPoints(prev => prev + 5);
+    toast.success('+5 баллов за лайк!');
+  };
+
+  const averageRating = reviews.length > 0 
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : '0.0';
+
+  const userLevel = Math.floor(userPoints / 100) + 1;
+  const progressToNextLevel = (userPoints % 100);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-            Отзывы и Рейтинги
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            Найдите проверенные отзывы о компаниях и товарах
-          </p>
+        <div className="flex justify-between items-start mb-8 animate-fade-in">
+          <div>
+            <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              Мой Магазин
+            </h1>
+            <p className="text-lg text-muted-foreground">Оставьте отзыв и заработайте баллы!</p>
+          </div>
+          
+          <Card className="backdrop-blur-sm bg-white/90 border-2 border-primary/20 min-w-[280px]">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2">
+                <Icon name="Trophy" className="w-5 h-5 text-amber-500" />
+                Ваш профиль
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Баллы:</span>
+                <Badge variant="default" className="text-lg px-3">
+                  <Icon name="Star" className="w-4 h-4 mr-1 fill-white" />
+                  {userPoints}
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Уровень {userLevel}</span>
+                  <span className="text-muted-foreground">{progressToNextLevel}/100</span>
+                </div>
+                <Progress value={progressToNextLevel} className="h-2" />
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">{reviews.length}</div>
+                  <div className="text-xs text-muted-foreground">Отзывов</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-secondary">{averageRating}</div>
+                  <div className="text-xs text-muted-foreground">Рейтинг</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-accent">{userLevel}</div>
+                  <div className="text-xs text-muted-foreground">Уровень</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="max-w-3xl mx-auto mb-12 animate-scale-in">
-          <div className="relative">
-            <Icon name="Search" className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-            <Input
-              type="text"
-              placeholder="Поиск по компаниям, товарам, категориям..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 h-14 text-lg border-2 focus:border-primary shadow-lg backdrop-blur-sm bg-white/80"
-            />
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <Card className="backdrop-blur-sm bg-white/90 border-2 hover:shadow-xl transition-all animate-scale-in">
+            <CardHeader className="bg-gradient-to-r from-primary/10 to-secondary/10">
+              <CardTitle className="flex items-center gap-2">
+                <Icon name="PenLine" className="w-5 h-5" />
+                Написать отзыв
+              </CardTitle>
+              <CardDescription>Поделитесь впечатлениями и получите 50 баллов!</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Ваше имя</label>
+                <Input
+                  placeholder="Введите имя"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  className="border-2"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Ваша оценка</label>
+                <div className="flex gap-2">
+                  {renderStars(rating, true, 8)}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Ваш отзыв</label>
+                <Textarea
+                  placeholder="Расскажите о своём опыте..."
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  className="min-h-[120px] border-2"
+                />
+              </div>
+              <Button 
+                onClick={submitReview}
+                className="w-full h-12 text-lg gap-2"
+                size="lg"
+              >
+                <Icon name="Send" className="w-5 h-5" />
+                Отправить отзыв (+50 баллов)
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="backdrop-blur-sm bg-gradient-to-br from-accent/20 to-secondary/20 border-2 border-accent hover:shadow-xl transition-all animate-scale-in">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Icon name="Gamepad2" className="w-5 h-5" />
+                Мини-игра: Поймай звезду! ⭐
+              </CardTitle>
+              <CardDescription>Ловите падающие звёзды и зарабатывайте баллы</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!isGameActive ? (
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4">🎮</div>
+                  <p className="text-lg mb-2">Нажимайте на падающие звёзды!</p>
+                  <p className="text-sm text-muted-foreground mb-6">Каждая звезда = 10 баллов</p>
+                  <Button 
+                    onClick={startGame}
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <Icon name="Play" className="w-5 h-5" />
+                    Начать игру
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex justify-between mb-4">
+                    <Badge variant="default" className="text-lg px-4 py-2">
+                      <Icon name="Star" className="w-4 h-4 mr-2 fill-white" />
+                      Счёт: {gameScore}
+                    </Badge>
+                    <Badge variant="secondary" className="text-lg px-4 py-2">
+                      <Icon name="Clock" className="w-4 h-4 mr-2" />
+                      {gameTime}s
+                    </Badge>
+                  </div>
+                  <div className="relative h-[400px] bg-gradient-to-b from-indigo-900 to-purple-900 rounded-lg overflow-hidden border-4 border-primary">
+                    {stars.map(star => (
+                      <button
+                        key={star.id}
+                        onClick={() => catchStar(star.id)}
+                        className="absolute text-4xl cursor-pointer hover:scale-125 transition-transform animate-pulse"
+                        style={{ left: `${star.x}px`, top: `${star.y}px` }}
+                      >
+                        ⭐
+                      </button>
+                    ))}
+                    {stars.length === 0 && gameTime > 25 && (
+                      <div className="absolute inset-0 flex items-center justify-center text-white/50 text-lg">
+                        Ждите звёзды...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mb-6 animate-fade-in">
+          <h2 className="text-3xl font-bold mb-2">Все отзывы ({reviews.length})</h2>
+          <div className="flex items-center gap-2">
+            <div className="flex">{renderStars(parseFloat(averageRating))}</div>
+            <span className="text-xl font-semibold">{averageRating}</span>
+            <span className="text-muted-foreground">из 5</span>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 justify-center mb-12 animate-fade-in">
-          {categories.map((category) => (
-            <Button
-              key={category.name}
-              variant={selectedCategory === category.name ? 'default' : 'outline'}
-              size="lg"
-              onClick={() => setSelectedCategory(category.name)}
-              className="gap-2 transition-all hover:scale-105"
-            >
-              <Icon name={category.icon} className="w-5 h-5" />
-              {category.name}
-              <Badge variant="secondary" className="ml-1">
-                {category.count}
-              </Badge>
-            </Button>
-          ))}
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-          {filteredReviews.map((review, index) => (
+        <div className="grid gap-6 md:grid-cols-2">
+          {reviews.map((review, index) => (
             <Card 
-              key={review.id} 
+              key={review.id}
               className="overflow-hidden transition-all hover:shadow-2xl hover:-translate-y-1 animate-fade-in backdrop-blur-sm bg-white/90 border-2"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <CardHeader className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 pb-4">
+              <CardHeader className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-2xl mb-2 flex items-center gap-2">
-                      {review.company}
-                      {review.verified && (
-                        <Badge variant="default" className="gap-1">
-                          <Icon name="BadgeCheck" className="w-3 h-3" />
-                          Проверено
-                        </Badge>
-                      )}
-                    </CardTitle>
-                    <CardDescription className="text-base">
-                      <Badge variant="outline" className="gap-1">
-                        <Icon name="Tag" className="w-3 h-3" />
-                        {review.category}
-                      </Badge>
-                    </CardDescription>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-12 h-12 border-2 border-primary">
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white font-bold">
+                        {review.author.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold flex items-center gap-2">
+                        {review.author}
+                        {review.verified && (
+                          <Badge variant="default" className="text-xs gap-1">
+                            <Icon name="BadgeCheck" className="w-3 h-3" />
+                            Проверен
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{review.date}</div>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-primary mb-1">
-                      {review.rating}
-                    </div>
-                    <div className="flex gap-0.5 mb-1">
+                    <div className="text-2xl font-bold text-primary mb-1">{review.rating}.0</div>
+                    <div className="flex gap-0.5">
                       {renderStars(review.rating)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {review.totalReviews} отзывов
                     </div>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
-                <div className="flex items-start gap-3 mb-4">
-                  <Avatar className="w-10 h-10 border-2 border-primary">
-                    <AvatarImage src={review.avatar} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
-                      {review.author.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="font-semibold text-foreground">{review.author}</div>
-                    <div className="text-sm text-muted-foreground">{review.date}</div>
-                  </div>
-                </div>
-                <p className="text-base leading-relaxed text-foreground/90 mb-4">
-                  {review.text}
-                </p>
+                <p className="text-base leading-relaxed mb-4">{review.text}</p>
                 <div className="flex items-center justify-between pt-4 border-t">
-                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="gap-2 hover:text-primary"
+                    onClick={() => likeReview(review.id)}
+                  >
                     <Icon name="ThumbsUp" className="w-4 h-4" />
                     Полезно ({review.likes})
                   </Button>
-                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
-                    <Icon name="MessageSquare" className="w-4 h-4" />
-                    Ответить
-                  </Button>
-                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
+                  <Button variant="ghost" size="sm" className="gap-2 hover:text-primary">
                     <Icon name="Share2" className="w-4 h-4" />
                     Поделиться
                   </Button>
@@ -215,14 +395,6 @@ const Index = () => {
             </Card>
           ))}
         </div>
-
-        {filteredReviews.length === 0 && (
-          <div className="text-center py-16 animate-fade-in">
-            <Icon name="SearchX" className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-2xl font-semibold mb-2">Ничего не найдено</h3>
-            <p className="text-muted-foreground">Попробуйте изменить параметры поиска</p>
-          </div>
-        )}
       </div>
     </div>
   );
